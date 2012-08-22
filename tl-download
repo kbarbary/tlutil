@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+"""Detect timelapse image sequences based on timestamps and move timelapses
+to new directory."""
+
+import os
+import shutil
+from argparse import ArgumentParser
+
+import tlutil
+
+# Command-line business.
+parser = ArgumentParser(description=__doc__)
+parser.add_argument('indir', metavar='INDIR', type=str,
+                    help='Directory in which to look for images')
+parser.add_argument('outdir', metavar="OUTDIR", nargs='?', default=None, 
+                    help="Move timelapses to given timelapse directory.")
+parser.add_argument("-d", "--dry-run", dest="dryrun", action="store_true",
+                    default=False, help="Show results of image parsing, "
+                    "but do not move any images.")
+args = parser.parse_args()
+
+timelapses, singleimages, videos = tlutil.find_timelapses(
+    args.indir, return_timestamps=True, return_images=True,
+    return_videos=True)
+
+num_tl_images = 0
+for tl in timelapses:
+    num_tl_images += len(tl)
+
+print "Single images:", len(singleimages)
+print "Videos:", len(videos)
+if len(timelapses) > 0:
+    print "Timelapse images: {} images in {} groups:".format(num_tl_images,
+                                                         len(timelapses))
+    for i, tl in enumerate(timelapses):
+        nimages = len(tl)
+        starttime = tl[0][1]
+        endtime = tl[-1][1]
+        print "{:3d}.{:4d} images from {} to {}".format(i, nimages, 
+                                                        starttime, endtime)
+
+if not args.dryrun:
+
+    # Check outdir.
+    if args.outdir is None:
+        raise ValueError("OUTDIR must be specified unless --dry-run is set")
+    if not (os.path.exists(args.outdir) and os.path.isdir(args.outdir)):
+        raise ValueError("OUTDIR does not exist.")
+
+    # Actually move the images.
+    if len(timelapses) > 0:
+        print "Moving timelapse images to {}...".format(args.outdir)
+        for timelapse in timelapses:
+
+            # Get output directory based on first image timestamp.
+            date, time = timelapse[0][1].split()
+            yyyy, mm, dd = date.split(':')
+            targetdir = "{}/{}/{}-{}/{}".format(args.outdir, yyyy, 
+                                                mm, dd, time)
+
+            # Recursively make all directories to targetdir.
+            if not os.path.exists(targetdir):
+                os.makedirs(targetdir)
+
+            # Move files to targetdir
+            for filename, timestamp in timelapse:
+                shutil.move(filename, targetdir)
