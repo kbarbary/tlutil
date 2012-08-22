@@ -26,3 +26,7 @@ optional arguments:
   -h, --help     show this help message and exit
   -d, --dry-run  Show results of image parsing, but do not move any images.
 ```
+
+Timelapses are grouped together and each group is placed in a single directory 
+`OUTDIR/YYYY/MM-DD/HH:MM:SS/` where the date and time are that of the first
+image in the group.
